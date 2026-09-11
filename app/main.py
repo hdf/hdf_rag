@@ -1,13 +1,14 @@
 import logging
 from contextlib import asynccontextmanager
+from time import perf_counter
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from qdrant_client import QdrantClient
 
 from app.config import Settings
 from app.embedding import InvalidText, LocalEmbedder
-from app.schemas import Document, DocumentResponse, SearchRequest, SearchResponse
+from app.schemas import Document, DocumentResponse, HealthResponse, SearchRequest, SearchResponse
 from app.service import DuplicateDocument, RetrievalService
 
 logger = logging.getLogger(__name__)
@@ -54,10 +55,34 @@ def create_app(settings: Settings | None = None, embedder=None) -> FastAPI:
         )
         return JSONResponse(status_code=503, content={"detail": "Service temporarily unavailable"})
 
-    @app.get("/health")
-    def health(request: Request):
-        request.app.state.service.health()
-        return {"status": "ok"}
+    @app.get(
+        "/health",
+        response_model=HealthResponse,
+        responses={503: {"model": HealthResponse, "description": "Qdrant check failed"}},
+    )
+    def health(request: Request, response: Response):
+        qdrant = {
+            "mode": "server" if settings.qdrant_url else "embedded",
+            "collection": settings.collection,
+        }
+        started = perf_counter()
+        try:
+            qdrant.update(request.app.state.service.health())
+            qdrant["reachable"] = True
+            healthy = qdrant["collection_status"] in {"green", "yellow"}
+            qdrant["status"] = "ok" if healthy else "degraded"
+        except Exception as exc:  # noqa: BLE001 - health boundary sanitizes all backend failures
+            logger.warning("Qdrant health check failed: error_type=%s", type(exc).__name__)
+            healthy = False
+            qdrant.update(
+                status="unavailable",
+                reachable=False,
+                detail="Could not read the configured Qdrant collection",
+            )
+        qdrant["check_duration_ms"] = round((perf_counter() - started) * 1000, 2)
+        if not healthy:
+            response.status_code = 503
+        return {"status": "ok" if healthy else "degraded", "qdrant": qdrant}
 
     @app.post("/documents", status_code=201, response_model=DocumentResponse)
     def add_document(document: Document, request: Request):

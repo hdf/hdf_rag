@@ -83,6 +83,26 @@ Keresési válasz alakja (a pontszám szemléltető érték):
 | `POST /documents` | Kötelező `id`, `title`, `text` JSON-mezők | 201; létező ID esetén 409 |
 | `POST /search` | Kötelező `query`; `top_k` alapértéke 3 | 200, `results` tömb |
 
+A `/health` sikeres válasza például:
+
+```json
+{
+  "status": "ok",
+  "qdrant": {
+    "status": "ok",
+    "reachable": true,
+    "mode": "embedded",
+    "collection": "documents_bge_m3_256_v1",
+    "collection_status": "green",
+    "points_count": 3,
+    "check_duration_ms": 0.12,
+    "detail": null
+  }
+}
+```
+
+Az ellenőrzés minden kérésnél ténylegesen lekéri a konfigurált collection adatait. A `points_count` a Qdrant által jelentett pontok (chunkok), nem a dokumentumok száma; szerveres módban közelítő érték lehet. Az `embedded` helyi, folyamaton belüli tárolót, a `server` külön Qdrant szervert jelent. A `green` és az optimalizálás alatti `yellow` állapot 200-at ad, más collection-állapot 503-at. Sikertelen lekérdezéskor `status: degraded`, `qdrant.status: unavailable`, `reachable: false` és általános hibaüzenet érkezik 503-mal; ez a collection hiányát is jelentheti, nem kizárólag hálózati hibát. A lekérdezési idő a folyamaton belüli lockra várást is tartalmazza. Nem végez próbaírást vagy embedding-számítást.
+
 Az ID legfeljebb 128, a cím 300, a dokumentum 100 000, a kérdés 2000 karakter. A csak whitespace tartalmú mezők, hiányzó vagy ismeretlen mezők és hibás típusok 422 választ eredményeznek. A `top_k` szigorúan egész szám 1–20 között. A modell tokenkorlátját túllépő kérdés szintén 422; nincs csendes levágás. A szélső whitespace-eket levágjuk a bemeneti szövegről. Üres indexben a keresés üres listát ad. Az ismételt ID 409 választ ad, és a meglévő dokumentumot megőrzi; frissítő és törlő API nem része a prototípusnak.
 
 A keresés chunkokat rangsorol, így egy dokumentum több találattal is megjelenhet. A koszinusz-hasonlósági pontszám nem valószínűség és nem megbízhatósági százalék. Nincs kalibrált relevanciaküszöb: nem üres indexben egy témán kívüli kérdésre is érkezhetnek találatok.
@@ -146,7 +166,7 @@ HDF_TEST_MODEL=1 pytest -q -m model
 
 PowerShell alatt előbb `$env:HDF_TEST_MODEL="1"`, majd `pytest -q -m model`. Ez első alkalommal letölti a modellt. A három kérdés smoke teszt; érdemi minőségméréshez ügyfélkérdésekkel címkézett adathalmaz és például Recall@k/MRR szükséges.
 
-Ellenőrzött eredmény a fenti környezetben: **17 sikeres teszt**, a valódi modellteszttel együtt; a `ruff check .` és a `pip check` is sikeres. A Starlette tesztkliens egy belső AnyIO API elavulásáról figyelmeztet; ez a teszteket nem akadályozza. A modellteszt a BGE-M3 1024 dimenziós kimenetét és hosszabb magyar szöveg több chunkra bontását is ellenőrzi.
+Ellenőrzött eredmény a fenti környezetben: **18 sikeres alapteszt** a health-bővítés után; a valódi BGE-M3 modellteszt a modellváltáskor külön sikeresen lefutott; a `ruff check .` és a `pip check` is sikeres. A Starlette tesztkliens egy belső AnyIO API elavulásáról figyelmeztet; ez a teszteket nem akadályozza. A modellteszt a BGE-M3 1024 dimenziós kimenetét és hosszabb magyar szöveg több chunkra bontását is ellenőrzi.
 
 ## Azure / vállalati továbbfejlesztés
 

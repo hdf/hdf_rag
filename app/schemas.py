@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -33,3 +33,19 @@ class SearchResult(BaseModel):
 
 class SearchResponse(BaseModel):
     results: list[SearchResult]
+
+
+class QdrantHealth(BaseModel):
+    status: Literal["ok", "degraded", "unavailable"]
+    reachable: bool
+    mode: Literal["embedded", "server"]
+    collection: str
+    collection_status: str | None = None
+    points_count: int | None = None
+    check_duration_ms: float
+    detail: str | None = None
+
+
+class HealthResponse(BaseModel):
+    status: Literal["ok", "degraded"]
+    qdrant: QdrantHealth

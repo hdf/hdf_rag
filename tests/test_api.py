@@ -40,7 +40,15 @@ def client(settings):
 
 
 def test_health_and_empty_search(client):
-    assert client.get("/health").json() == {"status": "ok"}
+    health = client.get("/health")
+    assert health.status_code == 200
+    body = health.json()
+    assert body["status"] == "ok"
+    assert body["qdrant"]["reachable"] is True
+    assert body["qdrant"]["mode"] == "embedded"
+    assert body["qdrant"]["collection_status"] == "green"
+    assert body["qdrant"]["points_count"] == 0
+    assert body["qdrant"]["check_duration_ms"] >= 0
     response = client.post("/search", json={"query": "projekt"})
     assert response.status_code == 200
     assert response.json() == {"results": []}
@@ -63,6 +71,7 @@ def test_upload_search_and_duplicate(client):
     assert hits[0]["document_id"] == "DOC-1"
     assert hits[0]["chunk"] == document["text"]
     assert hits[0]["score"] > 0.99
+    assert client.get("/health").json()["qdrant"]["points_count"] == 2
 
 
 @pytest.mark.parametrize(
@@ -96,13 +105,26 @@ def test_persistence(settings):
 
 
 def test_backend_failure_is_sanitized(client, monkeypatch):
-    def unavailable():
+    def unavailable(*args, **kwargs):
         raise RuntimeError("secret internal connection details")
 
-    monkeypatch.setattr(client.app.state.service, "health", unavailable)
+    monkeypatch.setattr(client.app.state.service.client, "get_collection", unavailable)
     response = client.get("/health")
     assert response.status_code == 503
     assert "secret" not in response.text
+    assert response.json()["qdrant"]["reachable"] is False
+    assert response.json()["qdrant"]["status"] == "unavailable"
+
+
+@pytest.mark.parametrize("status,expected_code", [("yellow", 200), ("red", 503)])
+def test_collection_health_status(client, monkeypatch, status, expected_code):
+    monkeypatch.setattr(
+        client.app.state.service, "health", lambda: {"collection_status": status, "points_count": 3}
+    )
+    response = client.get("/health")
+    assert response.status_code == expected_code
+    assert response.json()["qdrant"]["reachable"] is True
+    assert response.json()["qdrant"]["collection_status"] == status
 
 
 def test_chunk_source_offsets_and_overlap():

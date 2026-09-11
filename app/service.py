@@ -36,7 +36,11 @@ class RetrievalService:
 
     def health(self):
         with self.lock:
-            self.client.get_collection(self.collection)
+            info = self.client.get_collection(self.collection)
+            return {
+                "collection_status": info.status.value,
+                "points_count": info.points_count,
+            }
 
     def add(self, document: Document) -> int:
         with self.lock:
