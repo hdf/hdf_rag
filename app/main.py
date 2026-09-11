@@ -8,6 +8,7 @@ from qdrant_client import QdrantClient
 
 from app.config import Settings
 from app.embedding import InvalidText, LocalEmbedder
+from app.logging_config import application_logging
 from app.schemas import Document, DocumentResponse, HealthResponse, SearchRequest, SearchResponse
 from app.service import DuplicateDocument, RetrievalService
 
@@ -19,20 +20,21 @@ def create_app(settings: Settings | None = None, embedder=None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
-        logger.info("Loading embedding model and opening document store")
-        model = embedder if embedder is not None else LocalEmbedder()
-        client = (
-            QdrantClient(url=settings.qdrant_url, timeout=10)
-            if settings.qdrant_url
-            else QdrantClient(path=settings.qdrant_path)
-        )
-        try:
-            app.state.service = RetrievalService(client, model, settings.collection)
-            logger.info("Document search service ready")
-            yield
-        finally:
-            client.close()
+        with application_logging(settings.log_file):
+            logger.info("Loading embedding model and opening document store")
+            model = embedder if embedder is not None else LocalEmbedder()
+            client = (
+                QdrantClient(url=settings.qdrant_url, timeout=10)
+                if settings.qdrant_url
+                else QdrantClient(path=settings.qdrant_path)
+            )
+            try:
+                app.state.service = RetrievalService(client, model, settings.collection)
+                logger.info("Document search service ready")
+                yield
+            finally:
+                client.close()
+                logger.info("Document search service stopped")
 
     app = FastAPI(title="Local Document Search", version="0.1.0", lifespan=lifespan)
 

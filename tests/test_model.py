@@ -12,7 +12,12 @@ from app.main import create_app
 @pytest.mark.model
 @pytest.mark.skipif(os.environ.get("HDF_TEST_MODEL") != "1", reason="Set HDF_TEST_MODEL=1")
 def test_real_multilingual_retrieval(tmp_path):
-    settings = Settings(qdrant_path=str(tmp_path / "qdrant"), qdrant_url=None, _env_file=None)
+    settings = Settings(
+        qdrant_path=str(tmp_path / "qdrant"),
+        qdrant_url=None,
+        log_file=str(tmp_path / "app.log"),
+        _env_file=None,
+    )
     documents = json.loads((Path(__file__).parents[1] / "examples/documents.json").read_text())
     with TestClient(create_app(settings)) as api:
         embedder = api.app.state.service.embedder

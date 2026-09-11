@@ -109,6 +109,16 @@ A keresés chunkokat rangsorol, így egy dokumentum több találattal is megjele
 
 Az infrastruktúrahibák általános 503 választ adnak, belső kapcsolati adatok nélkül. A naplózás indulást, feltöltött chunkszámot, találatszámot és hibatípust rögzít; dokumentumtartalmat és kérdést nem naplózunk. Indulási hiba esetén a folyamat nem válik használatra késszé.
 
+### Naplózás
+
+Az alkalmazás saját eseményei egyszerre jelennek meg a konzolon és a **`logs/app.log`** fájlban, időbélyeggel, naplószinttel és modulnévvel. A könyvtár automatikusan létrejön. A fájl megmarad újraindítás után, az új eseményeket hozzáfűzzük. 5 MiB méretnél forgatjuk, és legfeljebb három korábbi fájlt tartunk meg (`app.log.1`–`app.log.3`): összesen körülbelül 20 MiB. Ez méretalapú, nem napokban megadott megőrzés. A `HDF_LOG_FILE` változóval más útvonal is megadható. A naplók nem kerülnek Gitbe.
+
+```bash
+tail -f logs/app.log
+```
+
+A fájl az alkalmazás indulását/leállását, feldolgozási eseményeit és hibatípusait tartalmazza. Az Uvicorn hozzáférési naplója, a függőségek üzenetei és a modellletöltési folyamatjelzők továbbra is a konzolon jelennek meg. A fájlos naplózás az egyfolyamatos futtatást feltételezi. Az alkalmazásnak írási jogosultság kell a naplókönyvtárhoz; ha a naplófájl induláskor nem nyitható meg, az indítás hibával leáll.
+
 ## Felépítés és döntések
 
 ```text
@@ -137,6 +147,7 @@ Az `.env.example` opcionálisan `.env` néven másolható. Minden parancsot a pr
 
 | Változó | Alapérték | Szerep |
 | --- | --- | --- |
+| `HDF_LOG_FILE` | `logs/app.log` | Alkalmazás naplófájlja |
 | `HDF_QDRANT_PATH` | `data/qdrant` | Beágyazott tároló könyvtára |
 | `HDF_QDRANT_URL` | nincs | Ha megadod, szerveres Qdrantot használ |
 | `HDF_COLLECTION` | `documents_bge_m3_256_v1` | Collection neve |
@@ -166,7 +177,7 @@ HDF_TEST_MODEL=1 pytest -q -m model
 
 PowerShell alatt előbb `$env:HDF_TEST_MODEL="1"`, majd `pytest -q -m model`. Ez első alkalommal letölti a modellt. A három kérdés smoke teszt; érdemi minőségméréshez ügyfélkérdésekkel címkézett adathalmaz és például Recall@k/MRR szükséges.
 
-Ellenőrzött eredmény a fenti környezetben: **18 sikeres alapteszt** a health-bővítés után; a valódi BGE-M3 modellteszt a modellváltáskor külön sikeresen lefutott; a `ruff check .` és a `pip check` is sikeres. A Starlette tesztkliens egy belső AnyIO API elavulásáról figyelmeztet; ez a teszteket nem akadályozza. A modellteszt a BGE-M3 1024 dimenziós kimenetét és hosszabb magyar szöveg több chunkra bontását is ellenőrzi.
+Ellenőrzött eredmény a fenti környezetben: **20 sikeres alapteszt** a fájlos naplózás bővítése után; a valódi BGE-M3 modellteszt a modellváltáskor külön sikeresen lefutott; a `ruff check .` és a `pip check` is sikeres. A Starlette tesztkliens egy belső AnyIO API elavulásáról figyelmeztet; ez a teszteket nem akadályozza. A modellteszt a BGE-M3 1024 dimenziós kimenetét és hosszabb magyar szöveg több chunkra bontását is ellenőrzi.
 
 ## Azure / vállalati továbbfejlesztés
 
@@ -199,11 +210,8 @@ scripts/load_examples.py Minták feltöltése
 tests/                 API-, perzisztencia- és opcionális modelltesztek
 pyproject.toml         Csomagdefiníció és függőségek
 requirements-lock.txt  Tesztelt Linux/Python 3.14 CPU-s verziók
-task.md                Eredeti feladatkiírás
 ```
-
-A `.gitignore` kizárja az adatokat, a virtuális környezetet, cache-eket és a `.env` fájlt. GitHubra feltöltés előtt a feladatkiírás megoszthatóságáról a repository tulajdonosa dönthet.
 
 ## AI-eszközök használata
 
-A megvalósításhoz OpenAI Codexet használtunk a feladat elemzésére, a kód és a dokumentáció elkészítésére, valamint a tesztek megírására és futtatására. A FastAPI és Qdrant választása a felhasználótól származik; a helyi többnyelvű embeddinget, a venv-alapú indítást, a magyar README-t és a duplikált ID-k 409-es kezelését a felhasználó külön megerősítette. Az automatizált ellenőrzések eredménye nem helyettesíti a beadó saját kódáttekintését. A beadás előtt ezt a megjegyzést egészítsd ki az általad ténylegesen ellenőrzött és módosított részekkel; jelenleg nem állítunk elvégzett emberi kódellenőrzést.
+A megvalósításhoz Astra Light-ot használtam a feladat elemzésére, a kód és a dokumentáció elkészítésére, valamint a tesztek megírására és futtatására.

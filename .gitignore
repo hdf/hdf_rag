@@ -9,4 +9,6 @@ dist/
 data/
 .env
 .cache/
-
+logs/
+*.log
+*.log.[0-9]*

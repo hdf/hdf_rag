@@ -6,5 +6,6 @@ class Settings(BaseSettings):
 
     qdrant_path: str = "data/qdrant"
     qdrant_url: str | None = None
+    log_file: str = "logs/app.log"
     # Change the collection and re-ingest when changing model/chunking semantics.
     collection: str = "documents_bge_m3_256_v1"

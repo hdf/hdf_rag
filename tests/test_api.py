@@ -30,7 +30,12 @@ class FakeEmbedder:
 
 @pytest.fixture
 def settings(tmp_path):
-    return Settings(qdrant_path=str(tmp_path / "qdrant"), qdrant_url=None, _env_file=None)
+    return Settings(
+        qdrant_path=str(tmp_path / "qdrant"),
+        qdrant_url=None,
+        log_file=str(tmp_path / "logs/app.log"),
+        _env_file=None,
+    )
 
 
 @pytest.fixture
