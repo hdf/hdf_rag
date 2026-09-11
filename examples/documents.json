@@ -1,0 +1,17 @@
+[
+  {
+    "id": "DOC-001",
+    "title": "Projektindítási útmutató",
+    "text": "Az új projekt indítása az üzleti célok és a várható eredmények meghatározásával kezdődik. A projektgazda kijelöli a projektvezetőt, aki összegyűjti az érintetteket. A nyitómegbeszélésen rögzítik a feladatokat, a felelősöket, a költségkeretet és a mérföldköveket. A projekttervet a szponzor hagyja jóvá."
+  },
+  {
+    "id": "DOC-002",
+    "title": "Szabadság igénylése",
+    "text": "A munkatárs a belső HR rendszerben adja le a szabadságigényét. Megadja az első és az utolsó napot, majd jóváhagyásra elküldi a közvetlen vezetőjének. A vezető ellenőrzi a csapat rendelkezésre állását, és jóváhagyja vagy elutasítja a kérést. A helyettesítésről a szabadság kezdete előtt egyeztetni kell."
+  },
+  {
+    "id": "DOC-003",
+    "title": "Production incident handling",
+    "text": "When a production incident occurs, the on-call engineer records the symptoms and assesses the impact. The incident commander coordinates mitigation and sends status updates. After service is restored, the team writes a post-incident review with the root cause and follow-up actions."
+  }
+]
